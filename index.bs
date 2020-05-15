@@ -429,6 +429,13 @@ which is either null or an [=/upgrade transaction=], and is initially null.
 </div>
 
 <!-- ============================================================ -->
+### Database storage ### {#database-storage}
+<!-- ============================================================ -->
+
+Indexed DB is a [=/storage endpoint=], with the [=/storage identifier=] <code>"indexedDB</code>. The storage for a [=/database=] is contained within a [=/storage bottle=]. The [=/database=]'s [=database/name=] is the [=map/key=] in the [=/storage bottle=]'s [=storage bottle/map=].
+
+
+<!-- ============================================================ -->
 ### Database connection ### {#database-connection}
 <!-- ============================================================ -->
 
@@ -2211,7 +2218,7 @@ The <dfn method for=IDBFactory>open(|name|, |version|)</dfn> method steps are:
 1. Run these steps [=in parallel=]:
 
     1. Let |result| be the result of running
-        [=open a database=], with |origin|,
+        [=open a database=], with |environment|,
         |name|, |version| if given and undefined
         otherwise, and |request|.
 
@@ -2282,7 +2289,7 @@ The <dfn method for=IDBFactory>deleteDatabase(|name|)</dfn> method steps are:
 1. Run these steps [=in parallel=]:
 
     1. Let |result| be the result of running
-        [=delete a database=], with |origin|,
+        [=delete a database=], with |environment|,
         |name|, and |request|.
 
     1. Set |request|'s [=request/processed flag=] to true.
@@ -2337,14 +2344,9 @@ The <dfn method for=IDBFactory>databases()</dfn> method steps are:
 
 1. Run these steps [=in parallel=]:
 
-    1. Let |databases| be the [=/set=] of [=databases=] in |origin|.
-        If this cannot be determined for any reason, then [=/reject=] |p| with
-        an appropriate error (e.g. an "{{UnknownError}}" {{DOMException}})
-        and terminate these steps.
+    1. Let |map| be the result of running [=/obtain a local bottle storage map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, [=/reject=] |p| with an appropriate error (e.g. an "{{UnknownError}}" {{DOMException}}) and terminate these steps.
 
-    1. Let |result| be a new [=/list=].
-
-    1. [=set/For each=] |db| of |databases|:
+    1. [=map/For each=] |name| &rarr; |db| of |map|:
 
         1. Let |info| be a new {{IDBDatabaseInfo}} dictionary.
         1. Set |info|'s {{IDBDatabaseInfo/name}} dictionary member to |db|'s [=database/name=].
@@ -4944,7 +4946,9 @@ The <dfn attribute for=IDBTransaction>onerror</dfn> attribute is an [=/event han
 
 <div algorithm>
 
-To <dfn>open a database</dfn> with |origin| which requested the [=database=] to be opened, a database |name|, a database |version|, and a |request|, run these steps:
+To <dfn>open a database</dfn> with [=/environment settings object=] |environment|, a database |name|, a database |version|, and a |request|, run these steps:
+
+1. Let |origin| be |environment|'s [=environment settings object/origin=].
 
 1. Let |queue| be the [=connection queue=] for |origin| and |name|.
 
@@ -4952,15 +4956,16 @@ To <dfn>open a database</dfn> with |origin| which requested the [=database=] to 
 
 1. Wait until all previous requests in |queue| have been processed.
 
-1. Let |db| be the [=database=] [=database/named=] |name| in
-    |origin|, or null otherwise.
+1. Let |map| be the result of running [=/obtain a local bottle storage map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, return an appropriate error (e.g. an "{{UnknownError}}" {{DOMException}}).
+
+1. Let |db| be |map|\[|name|] if it [=map/exists=], or null otherwise.
 
 1. If |version| is undefined, let |version| be 1 if |db| is null, or
     |db|'s [=database/version=] otherwise.
 
 1. If |db| is null, let |db| be a new [=database=] with
     [=database/name=] |name|, [=database/version=] 0 (zero), and with
-    no [=/object stores=]. If this fails for any reason, return an
+    no [=/object stores=], and [=map/set=] |map|\[|name|] to |db|. If this fails for any reason, return an
     appropriate error (e.g. a "{{QuotaExceededError}}" or
     "{{UnknownError}}" {{DOMException}}).
 
@@ -5069,9 +5074,9 @@ optional |forced flag|, run these steps:
 
 <div algorithm>
 
-To <dfn>delete a database</dfn> with the |origin| that
-requested the [=database=] to be deleted, a database |name|, and a
-|request|, run these steps:
+To <dfn>delete a database</dfn> with [=/environment settings object=] |environment|, a database |name|, and a |request|, run these steps:
+
+1. Let |origin| be |environment|'s [=environment settings object/origin=].
 
 1. Let |queue| be the [=connection queue=] for |origin| and |name|.
 
@@ -5079,8 +5084,11 @@ requested the [=database=] to be deleted, a database |name|, and a
 
 1. Wait until all previous requests in |queue| have been processed.
 
-1. Let |db| be the [=database=] [=database/named=] |name| in
-    |origin|, if one exists. Otherwise, return 0 (zero).
+1. Let |map| be the result of running [=/obtain a local bottle storage map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, return an appropriate error (e.g. an "{{UnknownError}}" {{DOMException}}).
+
+1. If |map|\[|name|] does not [=map/exist=], then return 0 (zero).
+
+1. Otherwise, let |db| be |map|\[|name|].
 
 1. Let |openConnections| be the [=/set=] of all [=/connections=]
     associated with |db|.
@@ -5110,7 +5118,7 @@ requested the [=database=] to be deleted, a database |name|, and a
 
 1. Let |version| be |db|'s [=database/version=].
 
-1. Delete |db|. If this fails for any reason, return an appropriate
+1. [=map/Remove=] |map|\[|name|]. If this fails for any reason, return an appropriate
     error (e.g. "{{QuotaExceededError}}" or "{{UnknownError}}" {{DOMException}}).
 
 1. Return |version|.
