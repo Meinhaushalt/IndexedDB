@@ -6792,6 +6792,7 @@ For the revision history of the second edition, see [that document's Revision Hi
 * Added {{IDBTransactionOptions/durability}} option and {{IDBTransaction/durability}} attribute. ([Issue #50](https://github.com/w3c/IndexedDB/issues/50))
 * Specified [[#transaction-scheduling]] more precisely and disallow starting read/write transactions while read-only transactions with overlapping scope are running. ([Issue #253](https://github.com/w3c/IndexedDB/issues/253))
 * Added <a href="#accessibility">Accessibility considerations</a> section. ([Issue #327](https://github.com/w3c/IndexedDB/issues/327))
+* Defined [=database=] storage in terms of [[Storage]] primitives.
 
 <!-- ============================================================ -->
 # Acknowledgements # {#acknowledgements}
