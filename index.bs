@@ -62,7 +62,13 @@ spec: ecma262; urlPrefix: https://tc39.github.io/ecma262/
         text: Uint8Array; url: sec-typedarray-objects
 spec: storage; urlPrefix: https://storage.spec.whatwg.org/
     type: dfn
+        text: storage identifier; url: storage-identifier
+        text: storage bottle; url: storage-bottle
+        for: storage bottle; text: map; url: storage-bottle-map
         text: storage bucket; url: storage-bucket
+        text: storage proxy map; url: storage-proxy-map
+        for: storage proxy map; text: backing map; url: storage-proxy-map-backing-map
+        text: obtain a local storage bottle map; url: obtain-a-local-storage-bottle-map
 </pre>
 
 <style>
@@ -1274,13 +1280,16 @@ unless an <a event>`upgradeneeded`</a> event has been fired.
 An [=open request=]'s [=get the parent=] algorithm returns null.
 
 [=Open requests=] are processed in a <dfn>connection queue</dfn>.
-The queue contains all [=open requests=] associated with an
-[=/origin=] and a [=database/name=]. Requests added to the
+The queue contains all [=open requests=] associated with a
+[=/storage bottle=] and a [=database/name=]. Requests added to the
 [=connection queue=] processed in order and each request must run
 to completion before the next request is processed. An open request
 may be blocked on other [=/connections=], requiring those
 connections to [=connection/close=] before the request can complete and allow
 further requests to be processed.
+
+Issue: Make the queue/bottle (or bottle map) association more rigorous.
+
 
 <aside class=note>
   A [=connection queue=] is not a [=task queue=] associated with
@@ -2208,17 +2217,14 @@ The <dfn method for=IDBFactory>open(|name|, |version|)</dfn> method steps are:
 
 1. Let |environment| be [=/this=]'s [=/relevant settings object=].
 
-1. Let |origin| be |environment|'s [=environment settings object/origin=].
-
-1. If |origin| is an [=opaque origin=], [=throw=] a
-    "{{SecurityError}}" {{DOMException}} and abort these steps.
+1. Let |map| be the result of running [=/obtain a local storage bottle map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, [=throw=] a "{{SecurityError}}" {{DOMException}} and abort these steps.
 
 1. Let |request| be a new [=open request=].
 
 1. Run these steps [=in parallel=]:
 
     1. Let |result| be the result of running
-        [=open a database=], with |environment|,
+        [=open a database=], with |map|,
         |name|, |version| if given and undefined
         otherwise, and |request|.
 
@@ -2279,17 +2285,14 @@ The <dfn method for=IDBFactory>deleteDatabase(|name|)</dfn> method steps are:
 
 1. Let |environment| be [=/this=]'s [=/relevant settings object=].
 
-1. Let |origin| be |environment|'s [=environment settings object/origin=].
-
-1. If |origin| is an [=opaque origin=], [=throw=] a
-    "{{SecurityError}}" {{DOMException}} and abort these steps.
+1. Let |map| be the result of running [=/obtain a local storage bottle map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, [=throw=] a "{{SecurityError}}" {{DOMException}} and abort these steps.
 
 1. Let |request| be a new [=open request=].
 
 1. Run these steps [=in parallel=]:
 
     1. Let |result| be the result of running
-        [=delete a database=], with |environment|,
+        [=delete a database=], with |map|,
         |name|, and |request|.
 
     1. Set |request|'s [=request/processed flag=] to true.
@@ -2335,16 +2338,11 @@ The <dfn method for=IDBFactory>databases()</dfn> method steps are:
 
 1. Let |environment| be [=/this=]'s [=/relevant settings object=].
 
-1. Let |origin| be |environment|'s [=environment settings object/origin=].
-
-1. If |origin| is an [=opaque origin=],
-    then return [=/a promise rejected with=] a "{{SecurityError}}" {{DOMException}}.
-
 1. Let |p| be [=/a new promise=].
 
 1. Run these steps [=in parallel=]:
 
-    1. Let |map| be the result of running [=/obtain a local bottle storage map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, [=/reject=] |p| with an appropriate error (e.g. an "{{UnknownError}}" {{DOMException}}) and terminate these steps.
+    1. Let |map| be the result of running [=/obtain a local storage bottle map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, [=/reject=] |p| with a "{{SecurityError}}" {{DOMException}} and terminate these steps.
 
     1. [=map/For each=] |name| &rarr; |db| of |map|:
 
@@ -4946,17 +4944,13 @@ The <dfn attribute for=IDBTransaction>onerror</dfn> attribute is an [=/event han
 
 <div algorithm>
 
-To <dfn>open a database</dfn> with [=/environment settings object=] |environment|, a database |name|, a database |version|, and a |request|, run these steps:
+To <dfn>open a database</dfn> with [=/storage proxy map=] |map|, a database |name|, a database |version|, and a |request|, run these steps:
 
-1. Let |origin| be |environment|'s [=environment settings object/origin=].
-
-1. Let |queue| be the [=connection queue=] for |origin| and |name|.
+1. Let |queue| be the [=connection queue=] for |map|'s [=storage proxy map/backing map=] and |name|.
 
 1. Add |request| to |queue|.
 
 1. Wait until all previous requests in |queue| have been processed.
-
-1. Let |map| be the result of running [=/obtain a local bottle storage map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, return an appropriate error (e.g. an "{{UnknownError}}" {{DOMException}}).
 
 1. Let |db| be |map|\[|name|] if it [=map/exists=], or null otherwise.
 
@@ -5074,17 +5068,13 @@ optional |forced flag|, run these steps:
 
 <div algorithm>
 
-To <dfn>delete a database</dfn> with [=/environment settings object=] |environment|, a database |name|, and a |request|, run these steps:
+To <dfn>delete a database</dfn> with [=/storage proxy map=] |map|, a database |name|, and a |request|, run these steps:
 
-1. Let |origin| be |environment|'s [=environment settings object/origin=].
-
-1. Let |queue| be the [=connection queue=] for |origin| and |name|.
+1. Let |queue| be the [=connection queue=] for |map|'s [=storage proxy map/backing map=] and |name|.
 
 1. Add |request| to |queue|.
 
 1. Wait until all previous requests in |queue| have been processed.
-
-1. Let |map| be the result of running [=/obtain a local bottle storage map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, return an appropriate error (e.g. an "{{UnknownError}}" {{DOMException}}).
 
 1. If |map|\[|name|] does not [=map/exist=], then return 0 (zero).
 
