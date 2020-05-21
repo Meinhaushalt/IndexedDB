@@ -2344,7 +2344,7 @@ The <dfn method for=IDBFactory>databases()</dfn> method steps are:
 
     1. Let |map| be the result of running [=/obtain a local storage bottle map=] with |environment| and <code>"indexedDB"</code>. If this returns failure, [=/reject=] |p| with a "{{SecurityError}}" {{DOMException}} and terminate these steps.
 
-    1. [=map/For each=] |name| &rarr; |db| of |map|:
+    1. [=map/For each=] |db| of |map|'s [=map/values=]:
 
         1. Let |info| be a new {{IDBDatabaseInfo}} dictionary.
         1. Set |info|'s {{IDBDatabaseInfo/name}} dictionary member to |db|'s [=database/name=].
