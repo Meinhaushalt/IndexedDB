@@ -2720,6 +2720,8 @@ interface IDBObjectStore {
   readonly attribute boolean autoIncrement;
 
   [NewObject] IDBRequest put(any value, optional any key);
+  [NewObject] IDBRequest putAllValues(sequence<any> values);
+  [NewObject] IDBRequest putAllEntries(sequence<sequence<any>> entries);
   [NewObject] IDBRequest add(any value, optional any key);
   [NewObject] IDBRequest delete(any query);
   [NewObject] IDBRequest clear();
@@ -2893,6 +2895,27 @@ and false otherwise.
         If successful, |request|'s {{IDBRequest/result}} will be the
         [=object-store/record=]'s [=/key=].
 
+    : |request| = |store| . {{IDBObjectStore/putAllValues()|putAllValues}}(|values|)
+
+    ::
+        Adds or updates multiple [=object-store/records=] in |store| with the given array of |values|.
+
+        [=/Keys=] can not be explicitly specified using this method, so it can only be used with an [=/object store=] that either has a [=/key generator=] or that uses [=in-line keys=]. Otherwise, a "{{DataError}}" {{DOMException}} will be thrown.
+
+
+        If any [=/record=] fails to be stored, no updates will be made and the |request| will fail, with |request|'s {{IDBRequest/error}} set to an error e.g. a "{{ConstraintError}}" {{DOMException}}.
+
+
+    : |request| = |store| . {{IDBObjectStore/putAllEntries()|putAllEntries}}(|entries|)
+
+    ::
+        Adds or updates multiple [=object-store/records=] in |store| with the given array of |entries|. Each entry is a two element array with a [=/key=] and [=/value=] for the record.
+
+        This method can only be used with an [=/object store=] that uses [=out-of-line keys=]. Otherwise, a "{{DataError}}" {{DOMException}} will be thrown.
+
+        If any [=/record=] fails to be stored, no updates will be made and the |request| will fail, with |request|'s {{IDBRequest/error}} set to an error e.g. a "{{ConstraintError}}" {{DOMException}}.
+
+
     : |request| = |store| .
           {{IDBObjectStore/delete()|delete}}(|query|)
     ::
@@ -2911,9 +2934,9 @@ and false otherwise.
 </div>
 
 
-The <dfn method for=IDBObjectStore>put(|value|, |key|)</dfn> method steps are to return the result of running [=add or put a single record=] with [=/this=], |value|, |key| and the |no-overwrite flag| false.
+The <dfn method for=IDBObjectStore>put(|value|, |key|)</dfn> method steps are to return the result of running [=add or put a single record=] with [=/this=], |value|, |key| and false.
 
-The <dfn method for=IDBObjectStore>add(|value|, |key|)</dfn> method steps are to return the result of running [=add or put a single record=] with [=/this=], |value|, |key| and the |no-overwrite flag| true.
+The <dfn method for=IDBObjectStore>add(|value|, |key|)</dfn> method steps are to return the result of running [=add or put a single record=] with [=/this=], |value|, |key| and true.
 
 <div algorithm>
 
@@ -2990,12 +3013,33 @@ To <dfn>add or put a single record</dfn> with |handle|, |value|, |key|, and |no-
 
 </div>
 
-
-Issue: Define `putAll()` method(s) that use [=/add or put multiple records=].
+The <dfn method for=IDBObjectStore>putAllValues(|values|)</dfn> method steps are to return the result of running [=add or put multiple records=] with [=/this=], |values|, and false.
 
 <div algorithm>
 
-To <dfn>add or put multiple records</dfn> with |handle|, |values|, |keys|, and |no-overwrite flag|, run these steps:
+The <dfn method for=IDBObjectStore>putAllEntries(|entries|)</dfn> method steps are:
+
+1. Let |keys| be a new [=/list=].
+
+1. Let |values| be a new [=/list=].
+
+1. [=list/For each=] |entry| of |entries|:
+
+    1. If |entry|'s [=list/size=] is not 2, [=throw=] a [=TypeError=].
+
+    1. [=list/Append=] |entry|[0] to |keys|.
+
+        Note: Keys are not [=convert a value to a key|converted=] until a subsequent step.
+
+    1. [=list/Append=] |entry|[1] to |values|.
+
+1. Return the result of running [=add or put multiple records=] with [=/this=], |values|, false, and |keys|.
+
+</div>
+
+<div algorithm>
+
+To <dfn>add or put multiple records</dfn> with |handle|, |values|, |no-overwrite flag|, and optional |keys|, run these steps:
 
 1. [=/Assert=]: If |keys| is given, |values| [=list/size=] equals |keys| [=list/size=].
 
@@ -6895,6 +6939,7 @@ For the revision history of the second edition, see [that document's Revision Hi
 * Added {{IDBTransactionOptions/durability}} option and {{IDBTransaction/durability}} attribute. ([Issue #50](https://github.com/w3c/IndexedDB/issues/50))
 * Specified [[#transaction-scheduling]] more precisely and disallow starting read/write transactions while read-only transactions with overlapping scope are running. ([Issue #253](https://github.com/w3c/IndexedDB/issues/253))
 * Added <a href="#accessibility">Accessibility considerations</a> section. ([Issue #327](https://github.com/w3c/IndexedDB/issues/327))
+* Added {{IDBObjectStore/putAllValues()}} and {{IDBObjectStore/putAllEntries()}} methods. ([Issue #69](https://github.com/w3c/IndexedDB/issues/69))
 
 <!-- ============================================================ -->
 # Acknowledgements # {#acknowledgements}
@@ -6941,6 +6986,7 @@ Kang-Hao Lu,
 Andrea Marchesini,
 Josh Matthews,
 Glenn Maynard,
+Numfor Mbiziwo-tiapo,
 Isiah Meadows,
 Ms2ger,
 Odin Omdal,
